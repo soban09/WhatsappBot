@@ -1,11 +1,9 @@
-import { regex1, regex2, regex3, regex4, regex5, regex6, regex7, regex8, regex9, regex10, regex11, regex12, regex13, regex14, regex15, regex16 } from './words.js'
-
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 import fetch from "node-fetch";
 import qrcode from 'qrcode-terminal'
 import { Client } from 'whatsapp-web.js'
-const {MessageMedia} = require('whatsapp-web.js')
+const { MessageMedia } = require('whatsapp-web.js')
 var mime = require('mime-types')
 import axios from 'axios'
 import memes from 'random-memes'
@@ -13,7 +11,7 @@ const fs = require('fs')
 const client = new Client();
 
 client.on('qr', qr => {
-    qrcode.generate(qr, {small: true});
+    qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
@@ -21,6 +19,8 @@ client.on('ready', () => {
 });
 
 client.on('message', async msg => {
+
+    var msgBody = msg.body
 
     if (msg.body === '!ping') {
         msg.reply('pong');
@@ -34,54 +34,30 @@ client.on('message', async msg => {
         }
     }
 
-    else if (msg.body.search(regex15)!==-1) {
-        msg.reply('Hi');
-    }
-
-    else if (msg.body.search(regex16)!==-1) {
-        msg.reply('Hello');
-    }
-
-    else if (msg.body.search(regex8) !== -1) {
-        msg.reply('Yes I am a bot!');
-    }
-
-    else if (msg.body.search(regex13) !== -1) {
-        msg.reply('My name is Eren, How may I help you?');
-    }
-
-    else if (msg.body.search(regex1) !== -1 || msg.body.search(regex2) !== -1) {
-        msg.reply('I know 😎');
-    }
-
-    else if (msg.body.search(regex11) !== -1 || msg.body.search(regex12) !== -1 || msg.body.search(regex10) !== -1) {
-        msg.reply('My Lord');
-    }
-
-    else if(msg.body === '-cmd'){
+    else if (msg.body === '-cmd') {
         msg.reply('```!ping = replies with pong\n!cmd = gives list of commands\n-sticker = replies with converted sticker (-sticker should be a caption on a photo)\n-meme = replies with a meme\n-joke = replies with a joke\nspam/yourMessage/noOfTimesToBeSend = spam a particular message a given no of times\nweather/locationName = gives the weather of the location\n!subject SubjectName = change the subject of the Group\n!desc DescriptionName = change the Description of the Group\n@tagE = will tag everyone```')
     }
 
-    else if(msg.hasMedia && msg.body==='-sticker'){
-        msg.downloadMedia().then(media=>{
-            if(media){
+    else if (msg.hasMedia && msg.body === '-sticker') {
+        msg.downloadMedia().then(media => {
+            if (media) {
                 const mediaPath = './downloaded-media'
-                if(!fs.existsSync(mediaPath)){
+                if (!fs.existsSync(mediaPath)) {
                     fs.mkdirSync(mediaPath)
                 }
                 const extension = mime.extension(media.mimetype)
                 const filename = new Date().getTime();
                 const fullFileName = mediaPath + filename + '.' + extension;
                 //Save file
-                try{
-                    fs.writeFileSync(fullFileName, media.data, {ecoding:'base64'})
+                try {
+                    fs.writeFileSync(fullFileName, media.data, { ecoding: 'base64' })
                     console.log('File Downloaded Successfully', fullFileName);
                     MessageMedia.fromFilePath(fullFileName)
-                    client.sendMessage(msg.from, new MessageMedia(media.mimetype, media.data, filename), {sendMediaAsSticker:true, stickerAuthor:"Created by bot", stickerName:"Stickers"})
+                    client.sendMessage(msg.from, new MessageMedia(media.mimetype, media.data, filename), { sendMediaAsSticker: true, stickerAuthor: "Created by bot", stickerName: "Stickers" })
                     fs.unlinkSync(fullFileName)
                     console.log('File deleted SuccessFully');
                 }
-                catch(err){
+                catch (err) {
                     console.log('Failed to save the File', err);
                     console.log('File Deleted Successfully');
                 }
@@ -154,7 +130,7 @@ client.on('message', async msg => {
         client.sendMessage(number, message);
 
     }
-    
+
     else if (msg.body.startsWith('!subject ')) {
         // Change the group subject
         let chat = await msg.getChat();
@@ -172,7 +148,7 @@ client.on('message', async msg => {
         msg.reply(msg.body.slice(6));
     }
 
-    else if(msg.body === '@tagE'){
+    else if (msg.body === '@tagE') {
         let chat = await msg.getChat()
         let participants = chat.participants
         console.log(participants);
@@ -210,6 +186,32 @@ client.on('message', async msg => {
             msg.reply('Joined the group!');
         } catch (e) {
             msg.reply('That invite code seems to be invalid.');
+        }
+    }
+
+    else {
+        try {
+            const response = await fetch('http://localhost:5000/api', {
+                method: 'POST',
+                body: JSON.stringify({prompt : msgBody}),
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            if (!response.ok) {
+                throw new Error('Something bad happened')
+            }
+            
+            if(response.ok) {
+                const data = await response.json();
+                const parsedData = data.bot.trim();
+                // console.log(parsedData)
+                msg.reply(parsedData)
+            }
+        }
+        catch (error) {
+            console.log(error);
+            msg.reply('Something went wrong')
         }
     }
 });
